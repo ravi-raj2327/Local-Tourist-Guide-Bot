@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Guide AI Chatbot</title>
+    <style>
+        /* --- Global Styles & Variables --- */
+        :root {
+            --primary-color: #00796b; /* Teal */
+            --secondary-color: #004d40; /* Darker Teal */
+            --accent-color: #ffab40; /* Amber accent */
+            --bg-color: #f0f4f8; /* Light background */
+            --chat-bg: #ffffff; /* Chat window background */
+            --user-msg-bg: #e0f2f1; /* Light teal for user */
+            --bot-msg-bg: #ffffff; /* White for bot */
+            --text-color: #333;
+            --light-text-color: #f1f1f1;
+            --border-color: #b2dfdb;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --border-radius: 12px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            background-image: linear-gradient(to bottom right, #e0f7fa, #b2ebf2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-color);
+        }
+
+        /* --- Chat Container --- */
+        #chat-container {
+            width: 100%;
+            max-width: 500px;
+            height: 85vh;
+            max-height: 700px;
+            background-color: var(--chat-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.3s ease-out;
+            border: 1px solid var(--border-color);
+        }
+
+        /* --- Chat Header --- */
+        #chat-header {
+            background-image: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            color: var(--light-text-color);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--secondary-color);
+            flex-shrink: 0;
+        }
+
+        #chat-header h2 {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        #chat-header h2 .icon {
+            margin-right: 10px;
+            font-size: 1.5em;
+            line-height: 1;
+        }
+
+        #header-buttons button {
+            background: none;
+            border: none;
+            color: var(--light-text-color);
+            font-size: 1.2em;
+            cursor: pointer;
+            margin-left: 10px;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+
+        #header-buttons button:hover {
+            opacity: 1;
+        }
+
+        /* --- Messages Area --- */
+        #chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px 15px;
+            background-color: #f8f9fa;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 15px;
+            max-width: 85%;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .message-content {
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            line-height: 1.5;
+            word-wrap: break-word;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .user-message {
+            justify-content: flex-end;
+            margin-left: auto;
+        }
+
+        .user-message .message-content {
+            background-color: var(--user-msg-bg);
+            color: #004d40;
+            border-bottom-right-radius: 2px;
+        }
+
+        .bot-message {
+            justify-content: flex-start;
+            margin-right: auto;
+        }
+
+        .bot-message .message-content {
+            background-color: var(--bot-msg-bg);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 2px;
+            position: relative;
+            padding-left: 45px;
+        }
+
+        .bot-message .bot-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.5em;
+            color: var(--primary-color);
+        }
+
+        /* Loading/Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .typing-indicator.visible {
+            opacity: 1;
+            height: auto;
+            margin-bottom: 15px;
+        }
+
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: var(--secondary-color);
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        /* --- Input Area --- */
+        #chat-input-area {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--chat-bg);
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        #user-input {
+            flex-grow: 1;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-right: 10px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        #user-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 121, 107, 0.2);
+        }
+
+        #send-button {
+            padding: 10px 15px;
+            background-color: var(--primary-color);
+            color: var(--light-text-color);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1.3em;
+            line-height: 1;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        #send-button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        #send-button:active {
+            transform: scale(0.95);
+        }
+
+        /* --- Quick Suggestions --- */
+        #quick-suggestions {
+            padding: 0 15px 10px;
+            border-top: 1px solid #eee;
+            background-color: var(--chat-bg);
+            flex-shrink: 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .suggestion-button {
+            padding: 6px 12px;
+            background-color: #e0f2f1;
+            color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .suggestion-button:hover {
+            background-color: var(--secondary-color);
+            color: var(--light-text-color);
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* --- Responsiveness --- */
+        @media (max-width: 600px) {
+            body {
+                padding: 0;
+                align-items: stretch;
+            }
+            #chat-container {
+                max-width: 100%;
+                height: 100vh;
+                max-height: none;
+                border-radius: 0;
+                border: none;
+                box-shadow: none;
+            }
+            #chat-header h2 {
+                font-size: 1.1em;
+            }
+            #user-input {
+                padding: 10px 12px;
+            }
+            #send-button {
+                padding: 8px 12px;
+                font-size: 1.2em;
+            }
+            .suggestion-button {
+                font-size: 0.8em;
+                padding: 5px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <!-- Chat Header -->
+        <div id="chat-header">
+            <h2><span class="icon">📍</span> Local Guide Bot</h2>
+            <div id="header-buttons">
+                <button id="clear-chat-button" title="Clear Chat">🗑</button>
+            </div>
+        </div>
+
+        <!-- Messages Display Area -->
+        <div id="chat-messages">
+            <div class="message bot-message">
+                <span class="bot-icon">🤖</span>
+                <div class="message-content">
+                    Hello! I'm your local guide assistant. Ask me about places, restaurants, activities, directions, or anything else about the area!
+                </div>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typing-indicator" class="typing-indicator">
+            <span class="bot-icon" style="position: static; transform: none; margin-right: 5px; font-size:1.3em;">🤖</span>
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <!-- Quick Suggestions -->
+        <div id="quick-suggestions">
+            <button class="suggestion-button">Restaurants near me?</button>
+            <button class="suggestion-button">Things to do today?</button>
+            <button class="suggestion-button">Best coffee shops?</button>
+            <button class="suggestion-button">Local events?</button>
+        </div>
+
+        <!-- Input Area -->
+        <div id="chat-input-area">
+            <input type="text" id="user-input" placeholder="Ask me anything locally...">
+            <button id="send-button" title="Send">➤</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const quickSuggestionsContainer = document.getElementById('quick-suggestions');
+        const clearChatButton = document.getElementById('clear-chat-button');
+
+        // API Configuration
+        const GEMINI_API_KEY = "AIzaSyBXKmjvY4tPXulkL2zbG1YLlZX6zzQ_9-Q";
+        const API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+
+        // Event Listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        clearChatButton.addEventListener('click', clearChat);
+        quickSuggestionsContainer.addEventListener('click', (event) => {
+            if (event.target.classList.contains('suggestion-button')) {
+                userInput.value = event.target.textContent;
+                userInput.focus();
+                sendMessage();
+            }
+        });
+
+        // Functions
+        function displayMessage(text, sender, isHTML = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', `${sender}-message`);
+
+            const messageContentDiv = document.createElement('div');
+            messageContentDiv.classList.add('message-content');
+
+            if (sender === 'bot') {
+                const botIcon = document.createElement('span');
+                botIcon.classList.add('bot-icon');
+                botIcon.textContent = '🤖';
+                messageDiv.appendChild(botIcon);
+            }
+
+            if (isHTML) {
+                text = text.replace(/<script.*?>.*?<\/script>/gi, '');
+                messageContentDiv.innerHTML = text;
+            } else {
+                messageContentDiv.textContent = text;
+            }
+
+            messageDiv.appendChild(messageContentDiv);
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator(show) {
+            if (show) {
+                typingIndicator.classList.add('visible');
+                scrollToBottom();
+            } else {
+                typingIndicator.classList.remove('visible');
+            }
+        }
+
+        async function sendMessage() {
+            const userText = userInput.value.trim();
+            if (!userText) return;
+
+            displayMessage(userText, 'user');
+            userInput.value = '';
+            showTypingIndicator(true);
+
+            try {
+                const botResponse = await getBotResponse(userText);
+                displayMessage(botResponse, 'bot');
+            } catch (error) {
+                console.error("Error fetching bot response:", error);
+                displayMessage("😥 Sorry, I couldn't connect to my brain right now. Please try again later.", 'bot');
+            } finally {
+                showTypingIndicator(false);
+            }
+        }
+
+        async function getBotResponse(userText) {
+            const prompt = `You are a friendly, helpful, and knowledgeable local guide chatbot. Your expertise is in providing information about places, activities, food, directions, local culture, and events. Answer the user's query concisely and engagingly based on this persona. User query: "${userText}"`;
+
+            const requestBody = {
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 500
+                }
+            };
+
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                return data.candidates[0].content.parts[0].text;
+            }
+            
+            throw new Error("Unexpected response structure from API");
+        }
+
+        function clearChat() {
+            const messages = chatMessages.querySelectorAll('.message');
+            for (let i = 1; i < messages.length; i++) {
+                messages[i].remove();
+            }
+        }
+
+        function updateQuickSuggestions() {
+            const suggestions = [
+                "Best parks nearby?",
+                "Museums open today?",
+                "Public transport options?",
+                "Local festivals this month?"
+            ];
+            
+            quickSuggestionsContainer.innerHTML = '';
+            suggestions.forEach(text => {
+                const button = document.createElement('button');
+                button.className = 'suggestion-button';
+                button.textContent = text;
+                quickSuggestionsContainer.appendChild(button);
+            });
+        }
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('chat-container').style.transform = 'translateY(0)';
+            userInput.focus();
+        });
+    </script>
+</body>
+</html>
